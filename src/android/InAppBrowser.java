@@ -985,13 +985,7 @@ public class InAppBrowser extends CordovaPlugin {
             }
         }
 
-        /**
-         * On received http auth request.
-         */
-        @Override
-        public void onReceivedHttpAuthRequest(WebView view, HttpAuthHandler handler, String host, String realm) {
-
-            // Check if there is some plugin which can resolve this auth challenge
+        private PluginManager getPluginManager() {
             PluginManager pluginManager = null;
             try {
                 Method gpm = webView.getClass().getMethod("getPluginManager");
@@ -1014,6 +1008,17 @@ public class InAppBrowser extends CordovaPlugin {
                     LOG.d(LOG_TAG, e.getLocalizedMessage());
                 }
             }
+            return pluginManager;
+        }
+
+        /**
+         * On received http auth request.
+         */
+        @Override
+        public void onReceivedHttpAuthRequest(WebView view, HttpAuthHandler handler, String host, String realm) {
+
+            // Check if there is some plugin which can resolve this auth challenge
+            PluginManager pluginManager = getPluginManager();
 
             if (pluginManager != null && pluginManager.onReceivedHttpAuthRequest(webView, new CordovaHttpAuthHandler(handler), host, realm)) {
                 return;
@@ -1022,38 +1027,15 @@ public class InAppBrowser extends CordovaPlugin {
             // By default handle 401 like we'd normally do!
             super.onReceivedHttpAuthRequest(view, handler, host, realm);
         }
+        
         @Override
         public void onReceivedClientCertRequest (WebView view, ClientCertRequest request) {
-
-            // Check if there is some plugin which can resolve this auth challenge
-            PluginManager pluginManager = null;
-            try {
-                Method gpm = webView.getClass().getMethod("getPluginManager");
-                pluginManager = (PluginManager)gpm.invoke(webView);
-            } catch (NoSuchMethodException e) {
-                LOG.d(LOG_TAG, e.getLocalizedMessage());
-            } catch (IllegalAccessException e) {
-                LOG.d(LOG_TAG, e.getLocalizedMessage());
-            } catch (InvocationTargetException e) {
-                LOG.d(LOG_TAG, e.getLocalizedMessage());
-            }
-
-            if (pluginManager == null) {
-                try {
-                    Field pmf = webView.getClass().getField("pluginManager");
-                    pluginManager = (PluginManager)pmf.get(webView);
-                } catch (NoSuchFieldException e) {
-                    LOG.d(LOG_TAG, e.getLocalizedMessage());
-                } catch (IllegalAccessException e) {
-                    LOG.d(LOG_TAG, e.getLocalizedMessage());
-                }
-            }
+            PluginManager pluginManager = getPluginManager();
 
             if (pluginManager != null && pluginManager.onReceivedClientCertRequest(webView, new CordovaClientCertRequest(request))) {
                 return;
             }
 
-            // By default handle 401 like we'd normally do!
             super.onReceivedClientCertRequest(view, request);
         }
     }
